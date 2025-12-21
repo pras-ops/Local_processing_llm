@@ -1,0 +1,29 @@
+# Development files
+src/
+tests/
+*.test.js
+*.spec.js
+
+# Documentation
+*.md
+!README.md
+
+# Config files
+.gitignore
+.eslintrc*
+.prettierrc*
+tsconfig.json
+vitest.config.js
+
+# Test files
+test.html
+TESTING_GUIDE.md
+HYPOTHESIS_TESTING.md
+OPTIONAL_LLM_ARCHITECTURE.md
+INTERNAL_LOGGING_GUIDE.md
+PROJECT_SUMMARY.md
+
+# Build artifacts (keep dist/ since it's in "files")
+node_modules/
+.DS_Store
+*.log

@@ -1,0 +1,54 @@
+{
+  "name": "client-llm-preprocessor",
+  "version": "0.1.0",
+  "description": "A privacy-first client-side preprocessing SDK with optional LLM support for cleaning and extraction",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/USERNAME/local_processing_llm.git"
+  },
+  "homepage": "https://github.com/USERNAME/local_processing_llm#readme",
+  "bugs": {
+    "url": "https://github.com/USERNAME/local_processing_llm/issues"
+  },
+  "scripts": {
+    "build": "tsup src/index.js --format esm --dts --out-dir dist",
+    "test": "vitest",
+    "dev": "npx http-server . -p 8080 -c-1"
+  },
+  "keywords": [
+    "webllm",
+    "llm",
+    "preprocessing",
+    "browser",
+    "client-side",
+    "text-processing",
+    "privacy",
+    "local-ai",
+    "text-cleaning",
+    "extraction",
+    "webgpu",
+    "privacy-first",
+    "offline",
+    "browser-ai",
+    "data-extraction"
+  ],
+  "author": "Client-Side LLM Preprocessor Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "@mlc-ai/web-llm": "0.2.6"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "vitest": "^1.1.0"
+  }
+}
