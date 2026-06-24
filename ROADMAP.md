@@ -4,6 +4,21 @@
 
 ---
 
+## ✅ Recently shipped
+
+- **Local server / proxy / CLI** (`redactkit`) — runs headroom-style as a local reverse proxy any app can point at, plus `redact`/`restore`/`clean` commands. Node entry at `redactkit/node`. ([src/server/proxy.js](src/server/proxy.js), [bin/redactkit.js](bin/redactkit.js))
+- **Tiered detection pipeline** — `regex (Tier 1) → local NER (Tier 2) → LLM (Tier 3)` behind a `Detector`/router abstraction, selected with `--tier`. Default is zero-dep regex so it runs on any hardware. ([src/detect/](src/detect/))
+- **Local NER tier** — `Xenova/bert-base-NER` (Piiranha/GLiNER optional) via transformers.js, fully offline after first download; preferred over the heavier LLM tier.
+- **Reversible local map store** with TTL ([src/server/store.js](src/server/store.js)); SSE streaming restore in the proxy.
+- **Rule-based compression** — content-type-aware token reduction (JSON minify, HTML strip, whitespace/dedupe), safe & dependency-free; `compress` CLI/`pipeline` step + proxy `--compress`. ([src/compress/](src/compress/))
+- **Image sanitization** — blur sensitive data in images: OCR text-PII (tesseract.js) + faces (transformers.js), blurred with sharp; `blur` CLI + proxy `--blur-images`. One-way (not reversible). ([src/image/](src/image/))
+- **Multi-provider proxy** — request-body redaction for OpenAI Chat Completions, Anthropic Messages, OpenAI Responses API, and Gemini, selectable via `--format`. Shields coding agents (Claude Code via `ANTHROPIC_BASE_URL`, Codex via `OPENAI_BASE_URL`). ([src/server/proxy.js](src/server/proxy.js))
+- **Browser extension (experimental)** — MV3 MAIN-world `fetch` interceptor for claude.ai / chatgpt.com / gemini; Tier-1 redaction in the browser. ([extension/](extension/))
+
+**Next up:** evaluation harness (precision/recall on `ai4privacy`/`presidio-research`), compliance profiles (`--profile hipaa|gdpr|pci`), file/document redaction (PDF/DOCX), and a browser (canvas-based) image path.
+
+---
+
 ## Phase 0 — Fix the known issues (≈1 hour, do first)
 
 Clean the slate before building anything new. All low-risk.
@@ -13,7 +28,7 @@ Clean the slate before building anything new. All low-risk.
 | 1 | `chunk()` infinite-loop when `overlap ≥ size` | [chunk.js:21](src/preprocess/chunk.js) | Clamp step: `const step = Math.max(1, size - overlap)` |
 | 2 | Error classes defined but unused (dead code) | [errors.js](src/utils/errors.js), [index.js](src/index.js), [engine.js](src/engine.js) | Wire `ModelNotLoadedError`/`InferenceError` into `_ensureLoaded` + engine, *or* delete the file. Recommend wiring in. |
 | 3 | README Quick Start calls `chunk()` with clean options | [README.md:70](README.md) | Change to `clean()`; fix the result comment |
-| 4 | Broken badges (`USERNAME` placeholder, unpublished npm pkg) | [README.md:3](README.md) | Point at real repo `pras-ops/Local_processing_llm`; remove/replace npm badge until published |
+| 4 | Broken badges (`USERNAME` placeholder, unpublished npm pkg) | [README.md:3](README.md) | Point at real repo `pras-ops/redactkit`; remove/replace npm badge until published |
 | 5 | Outdated browser table (WebGPU shipped everywhere Nov 2025) | [README.md:139](README.md) | Update Firefox/Safari to ✅ — it's now a selling point |
 | 6 | Unused `getLogger` imports | [clean.js](src/preprocess/clean.js), [extract.js](src/preprocess/extract.js) | Remove |
 | 7 | Missing edge-case test | [tests/unit/chunk.test.js](tests/unit/chunk.test.js) | Add `overlap ≥ size` test so #1 can't regress |
@@ -48,7 +63,7 @@ const answer = p.restore(response, map);     // placeholders → originals, loca
 2. **Live demo** — rewrite [examples/basic-demo.html](examples/basic-demo.html) as redact → (mock API call) → restore, runnable with **no model download** for the rule-based path. This is your shop window.
 3. **Fill the test gap** — the LLM path is currently mocked out and *untested*. Add at least one real browser-based test (Playwright/headless Chrome) that loads a model and exercises Tier 2.
 4. **Reproducible benchmarks** — replace the unsourced perf table with a script anyone can run.
-5. **Publish to npm** under a name that says what it does (e.g. `browser-pii-shield`). Discoverability is most of "useful in real life."
+5. **Publish to npm** under a name that says what it does (e.g. `redactkit`). Discoverability is most of "useful in real life."
 
 ---
 

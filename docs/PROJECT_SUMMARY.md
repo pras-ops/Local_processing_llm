@@ -2,7 +2,7 @@
 
 ## 🎯 What This Project Is
 
-**Client-Side LLM Preprocessor** - A JavaScript SDK that preprocesses text in the browser using:
+**RedactKit** - A JavaScript SDK that preprocesses text in the browser using:
 - **Fast rule-based operations** (no LLM needed)
 - **Optional LLM** for advanced semantic processing
 - **100% privacy-first** (everything runs locally)
@@ -37,7 +37,7 @@ Preprocessor (Main API)
 ## 📁 Project Structure
 
 ```
-local_processing_llm/
+redactkit/
 ├── package.json                    # Project config
 ├── README.md                       # Main documentation
 ├── INTERNAL_LOGGING_GUIDE.md      # Logging docs

@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "RedactKit",
+  "version": "0.1.0",
+  "description": "Redacts PII locally in your browser before chat apps send it, and restores it in the reply. Tier-1 (regex), 100% on-device.",
+  "icons": {},
+  "content_scripts": [
+    {
+      "matches": [
+        "https://claude.ai/*",
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": ["interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}

@@ -1,6 +1,10 @@
-import * as webllm from "@mlc-ai/web-llm";
 import { getLogger } from "./utils/logger.js";
 import { ModelNotLoadedError, InferenceError } from "./utils/errors.js";
+
+// NOTE: `@mlc-ai/web-llm` is browser-only (needs WebGPU). It is imported lazily
+// inside loadModel() so that this module can also be imported in Node.js
+// (proxy/CLI) without pulling in browser globals. Node code should use the
+// OllamaEngine (src/engines/ollama.js) instead of this WebLLM engine.
 
 /**
  * WebLLM Engine Wrapper
@@ -29,6 +33,7 @@ export class LLMEngine {
     this.logger.log('info', 'MODEL', `Loading model: ${model}`, { model });
 
     try {
+      const webllm = await import("@mlc-ai/web-llm");
       this.engine = await webllm.CreateMLCEngine(model, {
         initProgressCallback: (report) => {
           if (report.progress) {

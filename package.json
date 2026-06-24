@@ -1,7 +1,7 @@
 {
-  "name": "browser-pii-shield",
+  "name": "redactkit",
   "version": "0.1.0",
-  "description": "Privacy-first client-side PII redaction and restoration SDK for cloud LLMs",
+  "description": "Local PII redaction and restoration for cloud LLMs — redact before sending, restore on reply, 100% on-device",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -10,26 +10,44 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./node": {
+      "import": "./src/node.js"
+    },
+    "./browser-pii-shield": {
+      "import": "./dist/index.js"
+    },
+    "./browser-pii-shield/node": {
+      "import": "./src/node.js"
     }
+  },
+  "bin": {
+    "redactkit": "bin/redactkit.js"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "files": [
     "dist",
+    "src",
+    "bin",
     "README.md",
     "LICENSE"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/pras-ops/Local_processing_llm.git"
+    "url": "https://github.com/pras-ops/redactkit.git"
   },
-  "homepage": "https://github.com/pras-ops/Local_processing_llm#readme",
+  "homepage": "https://github.com/pras-ops/redactkit#readme",
   "bugs": {
-    "url": "https://github.com/pras-ops/Local_processing_llm/issues"
+    "url": "https://github.com/pras-ops/redactkit/issues"
   },
   "scripts": {
     "build": "tsup src/index.js --format esm --dts --out-dir dist",
     "prepublishOnly": "npm run build",
     "test": "vitest",
-    "dev": "npx http-server . -p 8080 -c-1"
+    "dev": "npx http-server . -p 8080 -c-1",
+    "serve": "node bin/redactkit.js serve"
   },
   "keywords": [
     "llm",
@@ -52,10 +70,15 @@
     "cost-saving",
     "experimental"
   ],
-  "author": "Client-Side LLM Preprocessor Contributors",
+  "author": "RedactKit Contributors",
   "license": "MIT",
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.80"
+  },
+  "optionalDependencies": {
+    "@huggingface/transformers": "^3.8.1",
+    "sharp": "^0.35.2",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",

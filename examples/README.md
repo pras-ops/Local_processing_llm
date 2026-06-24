@@ -1,6 +1,6 @@
 # Examples
 
-This directory contains interactive examples demonstrating the Client-Side LLM Preprocessor capabilities.
+This directory contains interactive examples demonstrating the RedactKit capabilities.
 
 ## Available Examples
 

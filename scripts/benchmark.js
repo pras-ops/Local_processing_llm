@@ -23,7 +23,7 @@ function generateMockText(sizeKb) {
 
 async function runBenchmarks() {
   console.log("==================================================");
-  console.log("  📊 Browser PII Shield Performance Benchmarks");
+  console.log("  📊 RedactKit Performance Benchmarks");
   console.log("==================================================");
   console.log("Generating test datasets...");
 

@@ -1,4 +1,4 @@
-# Architecture Overview: Client-Side LLM Preprocessor
+# Architecture Overview: RedactKit
 
 This document explains the internal design and data flow of the SDK.
 

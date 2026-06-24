@@ -1,4 +1,4 @@
-# Contributing to Client-Side LLM Preprocessor
+# Contributing to RedactKit
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
 
@@ -33,8 +33,8 @@ Enhancement suggestions are tracked as GitHub issues. Use the feature request te
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR-USERNAME/local_processing_llm.git
-cd local_processing_llm
+git clone https://github.com/YOUR-USERNAME/redactkit.git
+cd redactkit
 
 # Install dependencies
 npm install
@@ -52,7 +52,7 @@ npm run dev
 ## Project Structure
 
 ```
-local_processing_llm/
+redactkit/
 ├── src/              # Source code
 │   ├── preprocess/   # Preprocessing modules
 │   ├── utils/        # Utilities

@@ -1,6 +1,6 @@
 # 📊 Performance Benchmarks
 
-This document provides a performance baseline for the Browser PII Shield running on modern hardware.
+This document provides a performance baseline for RedactKit running on modern hardware.
 
 You can reproduce these benchmarks locally using:
 ```bash

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Browser PII Shield Demo Page', () => {
+test.describe('RedactKit Demo Page', () => {
     test.beforeEach(async ({ page }) => {
         // Since the dev server runs on http://localhost:8080 by default (via http-server)
         await page.goto('http://localhost:8080/examples/basic-demo.html');
@@ -9,7 +9,7 @@ test.describe('Browser PII Shield Demo Page', () => {
     test('should load the page and perform rule-based PII redaction and restoration', async ({ page }) => {
         // 1. Verify initial state
         const title = await page.locator('h1').textContent();
-        expect(title).toBe('Browser PII Shield');
+        expect(title).toBe('RedactKit');
 
         // 2. Click Redact button
         await page.click('#redactBtn');

@@ -3,19 +3,22 @@ import { clean } from "./preprocess/clean.js";
 import { chunk } from "./preprocess/chunk.js";
 import { extract } from "./preprocess/extract.js";
 import { redact, restore } from "./preprocess/redact.js";
+import { compress } from "./compress/compress.js";
 import { createShieldedFetch } from "./utils/fetch.js";
 import { ModelNotLoadedError } from "./utils/errors.js";
 
 /**
- * Client-Side LLM Preprocessor
+ * RedactKit
  * 
- * A flexible SDK for preprocessing text using local LLM models in the browser.
+ * Local PII redaction and restoration for cloud LLMs.
  * Supports cleaning, extraction, and custom prompts.
  */
 export class Preprocessor {
   constructor(options = {}) {
-    this.engine = new LLMEngine(options);
-    this.isModelLoaded = false;
+    // Allow injecting a custom engine (e.g. OllamaEngine for Node server/CLI) via
+    // options.engine. Defaults to the browser WebLLM engine for backwards compat.
+    this.engine = options.engine || new LLMEngine(options);
+    this.isModelLoaded = typeof this.engine.isLoaded === "function" ? this.engine.isLoaded() : false;
     this.logger = this.engine.getLogger();
   }
 
@@ -286,6 +289,9 @@ export class Preprocessor {
             case "chunk":
               result = this.chunk(result);
               break;
+            case "compress":
+              result = compress(result).compressed;
+              break;
             default:
               throw new Error(`Unknown operation: ${step}`);
           }
@@ -299,6 +305,8 @@ export class Preprocessor {
             result = await this.extract(result, step.extract);
           } else if (step.chunk) {
             result = this.chunk(result, step.chunk);
+          } else if (step.compress) {
+            result = compress(result, typeof step.compress === "object" ? step.compress : {}).compressed;
           } else {
             throw new Error(`Unknown operation object: ${JSON.stringify(step)}`);
           }
@@ -379,6 +387,10 @@ export class Preprocessor {
       );
     }
 
+    if (config.compress) {
+      result = compress(result, typeof config.compress === "object" ? config.compress : {}).compressed;
+    }
+
     return result;
   }
 }
@@ -390,5 +402,6 @@ export { cleanWithRules } from "./preprocess/clean-rules.js";
 export { chunk } from "./preprocess/chunk.js";
 export { extract } from "./preprocess/extract.js";
 export { redact, restore } from "./preprocess/redact.js";
+export { compress } from "./compress/compress.js";
 export { createShieldedFetch } from "./utils/fetch.js";
 

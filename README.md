@@ -1,219 +1,336 @@
-# Browser PII Shield 🛡️
+<div align="center">
 
-[![Build Status](https://github.com/pras-ops/Local_processing_llm/actions/workflows/ci.yml/badge.svg)](https://github.com/pras-ops/Local_processing_llm/actions)
+# RedactKit 🛡️
+
+**A local privacy layer for cloud LLMs** — redact sensitive data before it leaves your machine, restore it in the reply, and optionally compress prompts and blur sensitive data in images. **100% on-device.**
+
+[![CI](https://github.com/pras-ops/redactkit/actions/workflows/ci.yml/badge.svg)](https://github.com/pras-ops/redactkit/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A518-339933.svg)](package.json)
+[![Status](https://img.shields.io/badge/status-experimental-orange.svg)](ROADMAP.md)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-**Browser PII Shield** is a privacy-first, local JavaScript SDK designed to secure user privacy in the browser. It cleans noise, chunks text, redacts sensitive personal data (PII) client-side before sending prompts to external cloud LLM APIs, and safely restores the original values locally in the model's responses.
+</div>
 
-By running cleaning, redaction, and restoration entirely client-side, sensitive data **never leaves the user's device**. This makes it easy to maintain compliance with strict security requirements (HIPAA, GDPR, SOC2) without sacrificing cloud LLM capabilities.
-
----
-
-## 🌟 Key Features
-
-- 🕵️ **Privacy-First Zero-Leakage**: Local processing in the browser memory using WebGPU. No server-side logs or external privacy threats.
-- ⚡ **Hybrid Redaction Tiers**:
-  - **Tier 1 (Instant Rules)**: Direct pattern matching for common entities (Emails, Phone numbers, SSNs, Credit Cards with Luhn check, IP addresses, API keys) with **0 dependencies** and **no model download**.
-  - **Tier 2 (Local LLM NER)**: Uses a local 1B WebLLM model to perform semantic Named Entity Recognition (NER) for complex entities (Names, Addresses, Organizations).
-- 🔄 **Bidirectional Reversible Mapping**: Securely maps original sensitive data to placeholders (e.g., `{{EMAIL_1}}`, `{{NAME_1}}`), preserving entity identity and context across conversations.
-- 🔌 **One-Line Fetch Proxy**: A drop-in `fetch` wrapper that auto-intercepts prompts, redacts PII, and reconstructs original data on incoming JSON/text streams.
-- 🧹 **Robust Text Cleaning**: Strip HTML, URLs, extra whitespaces, line breaks, or use a local LLM for semantic, instruction-driven text cleaning.
-- 📊 **Structured Extraction & Hallucination Prevention**: Extract structured JSON fields using local LLMs, validated by deterministic regex guards to eliminate AI hallucinations.
-- 📦 **Ordered Pipelines**: Run multi-step preprocessing sequences (clean, chunk, extract, prompt) with built-in pipeline sorting (enforcing clean before extract).
+Use it as a **browser SDK**, a **local proxy/CLI** that shields any app, or a **browser extension**. Because detection, redaction, restoration, compression, OCR, and image blur all run locally, sensitive data **never leaves the device** — helping with HIPAA / GDPR / SOC2 without giving up cloud LLM quality.
 
 ---
 
-## 📦 Installation
+## Table of contents
+
+- [Why](#why)
+- [How it works](#how-it-works)
+- [Features](#features)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Use it with coding agents](#use-it-with-coding-agents)
+- [Detection tiers](#detection-tiers)
+- [Compression](#compression)
+- [Image sanitization](#image-sanitization)
+- [Browser extension](#browser-extension)
+- [API reference](#api-reference)
+- [Project structure](#project-structure)
+- [Development](#development)
+- [Privacy and security](#privacy-and-security)
+- [Performance](#performance)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Why
+
+Sending prompts to a cloud LLM means sending whatever is in them — names, emails, SSNs, API keys, customer data. RedactKit sits between your app and the provider and strips the sensitive parts **locally**, so the provider only ever sees placeholders like `{{EMAIL_1}}` and blurred images, while your reply still comes back with the real values filled in on your machine.
+
+---
+
+## How it works
+
+```mermaid
+flowchart LR
+    APP["Your app<br/>(SDK · CLI · proxy client)"]
+
+    subgraph LOCAL["🛡️ redactkit — runs 100% on your machine"]
+        direction TB
+        RED["1 · Redact PII<br/>regex → NER → LLM"]
+        CMP["2 · Compress<br/>rule-based, safe"]
+        IMG["3 · Blur images<br/>OCR PII + faces"]
+        RED --> CMP --> IMG
+        MAP[("Local map store<br/>TTL · never sent")]
+        RED -.->|"placeholder → value"| MAP
+    end
+
+    APP -->|"prompt + images"| RED
+    IMG -->|"redacted · compressed · blurred"| CLOUD["☁️ Cloud LLM<br/>OpenAI · Anthropic · …"]
+    CLOUD -->|"response with {{placeholders}}"| RES["4 · Restore PII locally"]
+    MAP -.-> RES
+    RES -->|"original values"| APP
+```
+
+The provider only sees placeholders and blurred images. The placeholder → value map stays in a local, TTL-bound store and is used only to restore the reply on your machine. **Text redaction is reversible; image blur is one-way by design.**
+
+---
+
+## Features
+
+- 🔒 **Reversible redaction** — PII becomes stable placeholders, restored locally; identity preserved across a conversation.
+- ⚡ **Tiered, local detection** — `regex → NER → LLM`; the default tier is instant and dependency-free.
+- 🔌 **Drop-in for any app** — a local OpenAI/Anthropic/Responses/Gemini-aware **reverse proxy**, plus a browser `fetch` wrapper. Streaming (SSE) responses restored on the fly.
+- 🤖 **Shields coding agents** — Claude Code, Codex CLI, and OpenAI-compatible IDEs (see [below](#use-it-with-coding-agents)).
+- 🗜️ **Safe compression** — rule-based token reduction (JSON minify, HTML strip, whitespace/dedupe), no AI, no meaning loss.
+- 🖼️ **Image sanitization** — blur PII text (OCR) and faces before images reach a vision model.
+- 🧩 **Browser extension** — Tier-1 redaction for web chat apps that have no endpoint setting.
+- 🕵️ **Private by construction** — nothing written to disk or sent upstream except placeholders and blurred pixels.
+
+---
+
+## Installation
 
 ```bash
-npm install browser-pii-shield
+npm install redactkit
+```
+
+Optional add-ons (only for the tiers/features that use them):
+
+```bash
+npm i @huggingface/transformers   # Tier 2 local NER + face detection
+npm i sharp tesseract.js          # image blur (sharp) + OCR (tesseract.js)
+# Ollama (separate install) for the LLM tier — https://ollama.com
+```
+
+**Node 18+** is required for the proxy/CLI (uses the built-in `fetch`).
+
+---
+
+## Quick start
+
+### Browser SDK
+
+```javascript
+import { Preprocessor } from "redactkit";
+
+const p = new Preprocessor();
+const { redacted, map } = await p.redact("Email john.doe@acme.org, card 4111-1111-1111-1111.");
+// redacted: "Email {{EMAIL_1}}, card {{CREDIT_CARD_1}}."
+
+// ...send `redacted` to any cloud LLM, then restore its reply locally:
+p.restore("We emailed {{EMAIL_1}}.", map); // "We emailed john.doe@acme.org."
+```
+
+One-line auto-shielding of `fetch` (redacts prompts, restores streamed replies):
+
+```javascript
+import { Preprocessor, createShieldedFetch } from "redactkit";
+globalThis.fetch = createShieldedFetch(new Preprocessor());
+```
+
+### Local proxy (shield any app, no code change)
+
+```bash
+# Tier 1 — rules only, fully local, zero deps (DEFAULT)
+npx redactkit serve --port 8787 --upstream https://api.openai.com
+export OPENAI_BASE_URL=http://localhost:8787/v1   # point your client here
+```
+
+Add capabilities as needed:
+
+```bash
+npx redactkit serve --tier ner --compress        # local NER + token compression
+npx redactkit serve --blur-images --faces        # sanitize images in vision requests
+```
+
+### CLI (one-shot files)
+
+```bash
+redactkit redact notes.txt --out safe.txt --map map.json   # + --tier ner
+redactkit restore reply.txt --map map.json
+redactkit compress payload.json --type json --drop-empty
+redactkit blur id-card.png --text-pii --faces --out safe.png
 ```
 
 ---
 
-## 🚀 Quick Start
+## Use it with coding agents
 
-### 1. Simple Reversible Redaction (No Model Required)
+Most coding tools let you point at a custom endpoint, so the proxy can shield them. The proxy auto-detects the request format; restrict it with `--format` if you like.
 
-```javascript
-import { Preprocessor } from 'browser-pii-shield';
+| Tool | Shieldable? | How |
+|------|-------------|-----|
+| **Claude Code** (CLI) | ✅ works today | `ANTHROPIC_BASE_URL` → proxy (upstream `https://api.anthropic.com`) |
+| **Codex CLI** (OpenAI) | ✅ | `OPENAI_BASE_URL` / `~/.codex/config.toml` (Responses API supported) |
+| **Cursor / IDEs w/ custom endpoint** | ✅ | set the OpenAI-compatible base URL to the proxy |
+| **Google Antigravity** | ⚠️ partial | only its "OpenAI-compatible model" slot; built-in agent can't be redirected |
+| **Claude/ChatGPT desktop apps** | ❌ | no base-URL hook → use the [browser extension](#browser-extension) or redact-before-paste |
 
-const preprocessor = new Preprocessor();
-
-const rawText = "Hello John, my email is john.doe@acme.org, and card is 4111-1111-1111-1111.";
-const { redacted, map } = await preprocessor.redact(rawText);
-
-console.log(redacted);
-// Output: "Hello John, my email is {{EMAIL_1}}, and card is {{CREDIT_CARD_1}}."
-
-// Transmit the redacted prompt to any cloud API safely
-const cloudResponse = "We registered a request for {{EMAIL_1}} on card {{CREDIT_CARD_1}}.";
-
-// Restore original values locally
-const restored = preprocessor.restore(cloudResponse, map);
-console.log(restored);
-// Output: "We registered a request for john.doe@acme.org on card 4111-1111-1111-1111."
+```bash
+# Claude Code — redacts everything it sends to Anthropic, locally
+redactkit serve --upstream https://api.anthropic.com --tier ner --compress --format anthropic
+export ANTHROPIC_BASE_URL=http://localhost:8787 && claude
 ```
 
-### 2. Multi-Step Pipelines
+Supported `--format` values (default = all): `openai`, `anthropic`, `responses`, `gemini`.
 
-Chain text cleaning, chunking, and custom prompting in a structured pipeline.
+---
 
-```javascript
-const preprocessor = new Preprocessor();
-await preprocessor.loadModel(); // Default: Llama-3.2-1B-Instruct-q4f16_1-MLC
+## Detection tiers
 
-const rawInput = "<div>Some noisy user feedback...</div>";
-const result = await preprocessor.pipeline(rawInput, [
-  { clean: { removeHtml: true, removeExtraWhitespace: true } },
-  { prompt: "Rewrite this feedback in bullet points." }
-]);
+You only pay for what your hardware can run. **Tier 1 (regex) is the default and needs zero dependencies**; richer tiers are opt-in and **add to** Tier 1 rather than replacing it.
+
+```mermaid
+flowchart TD
+    IN["Input text"] --> T1["Tier 1 · Regex + Luhn<br/>emails · phones · SSNs · cards · IPs · API keys<br/>(zero deps, always on)"]
+    T1 --> Q{"--tier ?"}
+    Q -->|rules| MERGE["Merge + dedupe"]
+    Q -->|ner / auto| T2["Tier 2 · Local NER<br/>names · locations · orgs<br/>(transformers.js, offline after first download)"]
+    Q -->|llm| T3["Tier 3 · Local LLM<br/>hardest semantic cases<br/>(Ollama / WebLLM)"]
+    T2 --> MERGE
+    T3 --> MERGE
+    MERGE --> OUT["Redacted text + reversible map"]
 ```
 
-### 3. Structured Extraction with Validation
+| Tier | Engine | Dependency | Detects |
+|------|--------|------------|---------|
+| `rules` *(default)* | regex + Luhn | **none** | emails, phones, SSNs, cards, IPs, API keys |
+| `ner` | local NER ([transformers.js](https://huggingface.co/docs/transformers.js); `Xenova/bert-base-NER` default) | `@huggingface/transformers` *(optional, cached then offline)* | names, locations, organizations |
+| `auto` | regex + NER if available | optional | best available, **degrades gracefully** |
+| `llm` | local LLM ([Ollama](https://ollama.com) / WebLLM) | Ollama / WebGPU | hardest semantic cases |
 
-Extract structured information safely without cloud provider hallucinations.
+---
 
-```javascript
-const result = await preprocessor.extract(rawText, {
-  what: "contact details",
-  format: "json",
-  fields: ["email", "phone"],
-  strict: true // Throws an error if extracted values don't exist in source
-});
+## Compression
+
+Rule-based and **safe** — reduces tokens without changing meaning, content-type aware: **JSON** minify (`--drop-empty` prunes empties), **HTML** strip + entity decode, **text** whitespace collapse + adjacent-line dedupe. Use it standalone (`redactkit compress`), in the proxy (`--compress`, applied **after** redaction), or as a `compress` step in `pipeline()`.
+
+---
+
+## Image sanitization
+
+```mermaid
+flowchart LR
+    IMG["Image"] --> OCR["OCR words + boxes<br/>(tesseract.js)"]
+    IMG --> FACE["Face / person detection<br/>(transformers.js)"]
+    OCR --> DET["PII detector on OCR text"]
+    DET --> BOX["Sensitive regions"]
+    FACE --> BOX
+    BOX --> BLUR["Blur / pixelate<br/>(sharp)"]
+    BLUR --> SAFE["Sanitized image<br/>⚠️ one-way (no restore)"]
 ```
 
-### 4. Drop-In Fetch Proxy (Streaming Support)
+Two local region detectors feed one blur pass: **OCR text-PII** (Tesseract.js → tiered detector) and **faces** (transformers.js). `sharp` and `tesseract.js` are optional deps. In the proxy, `--blur-images` sanitizes base64 images inside OpenAI/Anthropic vision requests before forwarding.
 
-Automatically intercept LLM outgoing requests (OpenAI, Anthropic, Groq, Cohere, OpenRouter) and decode incoming streams back to their unredacted format.
+> ⚠️ Image blur is **destructive** — the original pixels are gone. There is no image `restore`.
 
-```javascript
-import { Preprocessor, createShieldedFetch } from 'browser-pii-shield';
+---
 
-const preprocessor = new Preprocessor();
+## Browser extension
 
-// Intercept fetch
-globalThis.fetch = createShieldedFetch(preprocessor, {
-  redactOptions: {
-    formatPreserving: true // optional: keeps structural shape of email/IP/etc.
-  }
-});
+For **web** chat apps (claude.ai, chatgpt.com, gemini) — which have no endpoint setting — an optional Manifest V3 extension in [`extension/`](extension/) redacts locally in the browser by patching `fetch` (MAIN-world). Tier-1 only, experimental (these apps use private request shapes). Load it unpacked — see [extension/README.md](extension/README.md).
 
-// Outgoing prompts are automatically redacted; incoming responses auto-restored
-const response = await fetch('https://api.openai.com/v1/chat/completions', {
-  method: 'POST',
-  body: JSON.stringify({
-    messages: [{ role: 'user', content: 'Draft an invoice for john.doe@acme.org' }]
-  })
-});
+---
+
+## API reference
+
+Full reference in [docs/API.md](docs/API.md). Summary:
+
+**Browser SDK — `new Preprocessor(options)`:** `redact`, `restore`, `clean`, `extract`, `chunk`, `prompt`, `pipeline`, `process`, `loadModel`, `checkWebGPU`. `redact` options: `tier`, `rules`, `llm`, `customPatterns`, `allowList`, `denyList`, `formatPreserving`, `state`.
+
+**Node — `redactkit/node`:** `redact`, `restore`, `compress`, `clean`, `chunk`, `extract`, `createProxyServer`, `startProxy`, `ALL_FORMATS`, `MapStore`, `OllamaEngine`, `RegexDetector`, `NERDetector`, `LLMDetector`, `DetectorRouter`, `buildRouter`, `mergeSpans`, `ImageSanitizer`, `OcrPiiRegionDetector`, `FaceRegionDetector`, `blurRegions`, `recompress`.
+
+**CLI — `redactkit <command>`:**
+
+| Command | Purpose | Key flags |
+|---------|---------|-----------|
+| `serve` | Local reverse proxy | `--port` `--upstream` `--tier` `--format` `--compress` `--blur-images` `--faces` `--ttl` |
+| `redact` | Redact a file | `--out` `--map` `--tier` `--format-preserving` |
+| `restore` | Restore from a map | `--map` `--out` |
+| `clean` | Rule-based cleaning | `--html` `--urls` `--ws` `--linebreaks` `--special` `--entities` |
+| `compress` | Token compression | `--type json\|html\|text` `--drop-empty` |
+| `blur` | Sanitize an image | `--text-pii` `--faces` `--pixelate` `--ocr-lang` `--tier` |
+
+Run `redactkit help` for the full flag list.
+
+---
+
+## Project structure
+
 ```
+src/
+  index.js              # browser SDK entry (Preprocessor, createShieldedFetch)
+  node.js               # Node entry: redactkit/node
+  engine.js             # WebLLM engine (browser, lazy)        engines/ollama.js (Node LLM tier)
+  detect/               # tiered detection: regex · ner · llm · router
+  preprocess/           # redact/restore, clean, clean-rules, chunk, extract
+  compress/             # rule-based compression
+  image/                # sanitizer · ocr-region-detector · face-region-detector · blur
+  server/               # proxy.js (reverse proxy) · store.js (TTL map store)
+bin/redactkit.js        # CLI: serve · redact · restore · clean · compress · blur
+extension/              # optional MV3 browser extension
+docs/                   # API, ARCHITECTURE, BENCHMARKS, TESTING_GUIDE, …
+examples/               # basic-demo.html
+```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
+
+---
+
+## Development
+
+```bash
+git clone https://github.com/pras-ops/redactkit.git
+cd redactkit
+npm install
+
+npm test           # run the test suite (vitest)
+npm run build      # build the browser bundle (tsup -> dist/)
+npm run serve      # start the local proxy
+npm run dev        # serve examples/basic-demo.html at :8080
+```
+
+CI runs the tests and build on Node 18.x and 20.x. See [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md).
+
+---
+
+## Privacy and security
+
+- **Local-first:** redaction, NER, OCR, blur, compression, and restore all run on your machine.
+- **What the provider sees:** placeholders (`{{TYPE_n}}`) and blurred images — never the originals.
+- **The map never leaves:** placeholder→value lives in an in-memory store with a TTL; nothing is persisted or sent upstream.
+- **No mandatory downloads:** Tier 1 is pure regex; models (NER/LLM/OCR) are optional and run offline once cached.
 
 > [!WARNING]
-> **Format-Preserving Data Leakage**: In `formatPreserving` mode, structural details (e.g., email domains like `@acme.org` or IP subnets like `192.168.X.X`) remain visible to the cloud provider. Avoid enabling this if domain names or subnets are themselves considered identifying/sensitive for your organization.
+> `formatPreserving` keeps structural hints (e.g. an email domain, IP subnet) visible to the provider. Don't enable it if those are themselves sensitive.
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ---
 
-## 📖 API Reference
+## Performance
 
-### `new Preprocessor(options)`
-Creates an instance of the Preprocessor.
-- `options.streaming` *(boolean)*: Enable streaming for token-by-token logging during local inference (default: `true`).
-- `options.loggerOptions` *(Object)*: Custom options to configure the internal logging outputs.
+Rule-based utilities run instantly (no hardware requirements); see [docs/BENCHMARKS.md](docs/BENCHMARKS.md).
 
-### `await loadModel(modelName)`
-Downloads and caches the MLC/WebLLM model on the client.
-- `modelName` *(string)*: WebLLM model identifier (default: `"Llama-3.2-1B-Instruct-q4f16_1-MLC"`).
-
-### `await checkWebGPU()`
-Checks if WebGPU support is available and enabled in the browser environment. Returns `Promise<boolean>`.
-
-### `async redact(text, options)`
-Identifies and replaces sensitive elements with unique placeholders.
-- `options.rules` *(Object)*: Toggle regex-based rules: `email`, `phone`, `ssn`, `creditCard`, `ip`, `apiKey` (all `true` by default).
-- `options.llm` *(Object)*: Toggle LLM-assisted NER: `{ enabled: false, names: true, addresses: true, organizations: true }`.
-- `options.customPatterns` *(Array)*: Array of `{ name, regex }` objects for custom matching.
-- `options.allowList` *(Array<string>)*: Specific string values to exclude from redaction.
-- `options.denyList` *(Array<string>)*: Specific strings to target for forced custom redaction.
-- `options.formatPreserving` *(boolean)*: Preserves format context (e.g., `{{EMAIL_1:jXXXXn@acme.org}}`).
-- `options.state` *(Object)*: Shared state object to maintain sequential counters/mapping across conversational turns.
-
-### `restore(text, map)`
-Replaces placeholders with original text securely.
-- `text` *(string)*: The redacted response from the LLM.
-- `map` *(Object)*: The mapping dictionary returned from `redact()`.
-
-### `async clean(text, options)`
-Cleans structural noise. Works without loaded models for rule-based cleaning, and uses the local model for semantic cleanups.
-- `options.removeHtml` *(boolean)*: Strip HTML tags.
-- `options.removeUrls` *(boolean)*: Strip web URLs.
-- `options.removeExtraWhitespace` *(boolean)*: Collapses duplicate spacing/newlines.
-- `options.removeLineBreaks` *(boolean)*: Flatten newlines.
-- `options.removeSpecialChars` *(boolean)*: Remove special characters.
-- `options.decodeHtmlEntities` *(boolean)*: Translate XML/HTML entity codes.
-- `options.useLLM` *(boolean)*: Force local LLM engine processing.
-- `options.customInstructions` *(string)*: Custom semantic cleanup prompt (requires LLM).
-
-### `async extract(text, options)`
-Extracts target information with strict schema guards.
-- `options.what` *(string)*: Entity description to extract.
-- `options.format` *(string)*: `"text"`, `"json"`, or `"list"`.
-- `options.fields` *(Array<string>)*: Target schema keys to extract (requires JSON format).
-- `options.validate` *(boolean)*: Ensure JSON structure and rule validation (default: `true`).
-- `options.strict` *(boolean)*: Throw error if validation checks fail (default: `false`).
-
-### `chunk(text, options)`
-Split text locally without requiring an LLM model.
-- `options.size` *(number)*: Character length limit per chunk (default: `500`).
-- `options.overlap` *(number)*: Chunk token overlap length (default: `0`).
-- `options.strategy` *(string)*: Segment method: `"character"`, `"sentence"`, or `"word"`.
-
-### `async prompt(text, instruction, options)`
-Issues custom prompts to the local model.
-- `instruction` *(string|Object)*: Raw instruction or config containing `instruction`, `format` (schema structure), `temperature`, and `maxTokens`.
-
-### `async pipeline(text, steps)`
-Runs a sequence of tasks (e.g. `['clean', { prompt: '...' }]`), automatically ordering steps to clean input text before processing.
-
----
-
-## 📊 Performance & Optimization
-
-Run performance suites locally on your system:
-```bash
-node scripts/benchmark.js
-```
-
-### ⚡ Rule-Based Performance (Non-LLM)
-Rule-based utilities (regex filters, clean-ups, chunkers) run instantly with zero hardware limitations:
-
-| Input Size | Clean (HTML + URLs) | Chunking (1000 char) | Redact PII (Rules) |
+| Input size | Clean (HTML+URLs) | Chunk (1000c) | Redact (rules) |
 | :--- | :--- | :--- | :--- |
-| **10 KB** | < 1ms | < 1ms | ~1ms |
-| **1 MB** | ~4ms | < 1ms | ~15ms |
-| **5 MB** | ~25ms | < 1ms | ~67ms |
+| 10 KB | < 1 ms | < 1 ms | ~1 ms |
+| 1 MB | ~4 ms | < 1 ms | ~15 ms |
+| 5 MB | ~25 ms | < 1 ms | ~67 ms |
 
-### 🧠 Local LLM Execution (Llama-3.2-1B-Instruct)
-- **Model Cache Loading**: 2–5 seconds.
-- **VRAM Requirements**: 1.5GB–3.5GB.
-- **Inference Speed**: ~15–30 tokens/sec (hardware dependent).
-
-> [!TIP]
-> **Token Cost Savings**: Cleaning noise (HTML/CSS) and summarizing documents client-side using Browser PII Shield can reduce cloud token costs by **up to 90–99%** by transmitting only the core insights.
+Optional local models add tens of ms (NER) to seconds (LLM); first run downloads + caches, then runs offline.
 
 ---
 
-## 🌐 Browser Requirements
+## Roadmap
 
-- **Instant Rules**: All modern desktop/mobile browsers.
-- **LLM/WebGPU Engines**:
-  - Chrome 113+
-  - Edge 113+
-  - Safari (Supported)
-  - Firefox (Supported)
+See [ROADMAP.md](ROADMAP.md) — shipped: tiered detection, multi-provider proxy, compression, image sanitization, browser extension. Next: evaluation harness, compliance profiles, document (PDF/DOCX) redaction.
 
 ---
 
-## ⚖️ License
+## Contributing
 
-Distributed under the **MIT License**. See `LICENSE` for details.
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Use the issue templates for [bugs](.github/ISSUE_TEMPLATE/bug_report.md) and [features](.github/ISSUE_TEMPLATE/feature_request.md).
+
+---
+
+## License
+
+[MIT](LICENSE) © RedactKit contributors.

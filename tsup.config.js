@@ -9,9 +9,10 @@ export default defineConfig({
   sourcemap: false,
   clean: true,
   bundle: true,
-  // Keep @mlc-ai/web-llm as external dependency (not bundled)
-  // Users will need to install it separately and handle polyfills
-  external: ['@mlc-ai/web-llm'],
+  // Keep heavy/optional deps external (not bundled). Users install them
+  // separately: @mlc-ai/web-llm for the LLM tier, @huggingface/transformers
+  // for the local NER tier. Both are lazy-imported at runtime.
+  external: ['@mlc-ai/web-llm', '@huggingface/transformers'],
   platform: 'browser',
   target: 'es2020',
 });
