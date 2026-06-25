@@ -1,5 +1,5 @@
 {
-  "name": "redactkit",
+  "name": "@pras-ops/redactkit",
   "version": "0.1.0",
   "description": "Local PII redaction and restoration for cloud LLMs — redact before sending, restore on reply, 100% on-device",
   "type": "module",
@@ -8,17 +8,28 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./node": {
-      "import": "./src/node.js"
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
     },
     "./browser-pii-shield": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./browser-pii-shield/node": {
-      "import": "./src/node.js"
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    },
+    "./ai-sdk": {
+      "types": "./dist/ai-sdk.d.ts",
+      "import": "./dist/ai-sdk.js"
+    },
+    "./mastra": {
+      "types": "./dist/mastra.d.ts",
+      "import": "./dist/mastra.js"
     }
   },
   "bin": {
@@ -43,7 +54,7 @@
     "url": "https://github.com/pras-ops/redactkit/issues"
   },
   "scripts": {
-    "build": "tsup src/index.js --format esm --dts --out-dir dist",
+    "build": "tsup",
     "prepublishOnly": "npm run build",
     "test": "vitest",
     "dev": "npx http-server . -p 8080 -c-1",
@@ -75,6 +86,18 @@
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.80"
   },
+  "peerDependencies": {
+    "@ai-sdk/provider": ">=0.0.1",
+    "ai": ">=3.0.0 || >=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ai": {
+      "optional": true
+    },
+    "@ai-sdk/provider": {
+      "optional": true
+    }
+  },
   "optionalDependencies": {
     "@huggingface/transformers": "^3.8.1",
     "sharp": "^0.35.2",
@@ -82,6 +105,7 @@
   },
   "devDependencies": {
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
+    "ai": "^7.0.0",
     "tsup": "^8.0.1",
     "typescript": "^5.9.3",
     "vite": "^7.3.0",

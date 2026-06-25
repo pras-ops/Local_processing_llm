@@ -32,6 +32,24 @@ LLM operations require WebGPU and model loading.
 *   **Cleaning (Semantic)**: 3-8 seconds
 *   **Pipeline (Clean + Extract)**: 5-12 seconds
 
+## 🎯 Accuracy and F1 Benchmarks
+
+These metrics are evaluated using a static slice representing standard PII entities (email, phone, credit card, SSN, IP address, API key, person, location, organization).
+
+You can run the accuracy evaluation suite locally using:
+```bash
+node scripts/eval.js
+```
+
+### Overall Metrics
+
+| Tier | Precision | Recall | F1-Score | TP | FP | FN |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Rules (Regex-only)** | 90.91% | 43.48% | 58.82% | 10 | 1 | 13 |
+| **NER (bert-base-NER)** | 52.17% | 52.17% | 52.17% | 12 | 11 | 11 |
+
+*Note: The NER tier precision/recall reflects exact tag-to-tag matches (e.g. matching PERSON to NAME tag variations).*
+
 ## 🐢 Known Bottlenecks
 
 1.  **UI Blocking**: Since this SDK currently runs on the main thread, the browser UI will freeze during LLM inference. We recommend showing a "Processing..." overlay to the user.

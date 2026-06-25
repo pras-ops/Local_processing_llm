@@ -499,6 +499,48 @@ For payments, please use Visa 4111-1111-1111-1111 (SSN: 999-12-3456, API-Key: sk
                 </div>
             </div>
         </div>
+
+        <!-- Code Integration Snippets -->
+        <div class="card" style="margin-top: 30px;">
+            <h2>🔌 Framework Integration</h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 20px; line-height: 1.5;">
+                Drop RedactKit directly into your AI agent pipelines to automate local PII protection:
+            </p>
+            
+            <div class="tabs" style="margin-bottom: 15px;">
+                <button class="tab-btn active" id="aiSdkSnippetBtn" onclick="switchSnippetTab('aisdk')">Vercel AI SDK</button>
+                <button class="tab-btn" id="mastraSnippetBtn" onclick="switchSnippetTab('mastra')">Mastra Agent</button>
+            </div>
+
+            <!-- AI SDK Snippet -->
+            <pre id="aiSdkSnippet" class="highlight-container" style="display: block; font-size: 0.85rem; min-height: auto; overflow-x: auto; white-space: pre;">import { openai } from "@ai-sdk/openai";
+import { wrapLanguageModel, generateText } from "ai";
+import { redactMiddleware } from "@pras-ops/redactkit/ai-sdk";
+
+// Wrap your model to automatically redact prompts & restore responses
+const model = wrapLanguageModel({
+  model: openai("gpt-4o"),
+  middleware: redactMiddleware({ tier: "rules" }),
+});
+
+const { text } = await generateText({
+  model,
+  prompt: "My email is john.doe@example.com.",
+});</pre>
+
+            <!-- Mastra Snippet -->
+            <pre id="mastraSnippet" class="highlight-container" style="display: none; font-size: 0.85rem; min-height: auto; overflow-x: auto; white-space: pre;">import { Agent } from "@mastra/core";
+import { MastraProcessor } from "@pras-ops/redactkit/mastra";
+
+const piiProcessor = new MastraProcessor({ tier: "rules" });
+
+const agent = new Agent({
+  name: "Private Agent",
+  instructions: "You are a customer support agent.",
+  model: { provider: "OPENAI", name: "gpt-4o" },
+  processors: [piiProcessor],
+});</pre>
+        </div>
     </div>
 
     <script type="module">
@@ -537,6 +579,13 @@ For payments, please use Visa 4111-1111-1111-1111 (SSN: 999-12-3456, API-Key: sk
 
         // Initialize active tab details
         switchTab('rules');
+
+        window.switchSnippetTab = function(tab) {
+            document.getElementById('aiSdkSnippetBtn').classList.toggle('active', tab === 'aisdk');
+            document.getElementById('mastraSnippetBtn').classList.toggle('active', tab === 'mastra');
+            document.getElementById('aiSdkSnippet').style.display = tab === 'aisdk' ? 'block' : 'none';
+            document.getElementById('mastraSnippet').style.display = tab === 'mastra' ? 'block' : 'none';
+        };
 
         window.initializeLocalLLM = async function() {
             const btn = document.getElementById('loadModelBtn');

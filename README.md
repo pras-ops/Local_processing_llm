@@ -75,6 +75,8 @@ The provider only sees placeholders and blurred images. The placeholder → valu
 
 ## Demo
 
+[**⚡ Try the Live Demo on GitHub Pages**](https://pras-ops.github.io/redactkit/)
+
 Here is a recording of RedactKit in action, demonstrating the local redaction, simulated cloud LLM response, and automatic local restoration:
 
 ![RedactKit Demo](docs/demo.webp)
@@ -116,7 +118,7 @@ The cloud LLM processes the redacted prompt and returns a response containing th
 ## Installation
 
 ```bash
-npm install redactkit
+npm install @pras-ops/redactkit
 ```
 
 Optional add-ons (only for the tiers/features that use them):
@@ -136,7 +138,7 @@ npm i sharp tesseract.js          # image blur (sharp) + OCR (tesseract.js)
 ### Browser SDK
 
 ```javascript
-import { Preprocessor } from "redactkit";
+import { Preprocessor } from "@pras-ops/redactkit";
 
 const p = new Preprocessor();
 const { redacted, map } = await p.redact("Email john.doe@acme.org, card 4111-1111-1111-1111.");
@@ -149,32 +151,72 @@ p.restore("We emailed {{EMAIL_1}}.", map); // "We emailed john.doe@acme.org."
 One-line auto-shielding of `fetch` (redacts prompts, restores streamed replies):
 
 ```javascript
-import { Preprocessor, createShieldedFetch } from "redactkit";
+import { Preprocessor, createShieldedFetch } from "@pras-ops/redactkit";
 globalThis.fetch = createShieldedFetch(new Preprocessor());
+```
+
+### AI SDK Middleware (Vercel AI SDK)
+
+Add local privacy shielding to Vercel AI SDK pipelines with `LanguageModelV3Middleware`. Prompts are redacted on-the-fly and response tokens are restored automatically:
+
+```javascript
+import { openai } from "@ai-sdk/openai";
+import { experimental_wrapLanguageModel as wrapLanguageModel } from "ai";
+import { redactMiddleware } from "@pras-ops/redactkit/ai-sdk";
+
+const model = wrapLanguageModel({
+  model: openai("gpt-4o"),
+  middleware: redactMiddleware({
+    tier: "rules", // Or "ner", "llm" for local models
+  }),
+});
+
+const { text } = await generateText({
+  model,
+  prompt: "My name is John Doe, email me at john@example.com.",
+});
+```
+
+### Mastra Agent Processor
+
+Run RedactKit as a privacy guardrail in Mastra:
+
+```javascript
+import { Agent } from "@mastra/core";
+import { MastraProcessor } from "@pras-ops/redactkit/mastra";
+
+const piiProcessor = new MastraProcessor({ tier: "rules" });
+
+const agent = new Agent({
+  name: "Private Agent",
+  instructions: "You are a customer support agent.",
+  model: { provider: "OPENAI", name: "gpt-4o" },
+  processors: [piiProcessor],
+});
 ```
 
 ### Local proxy (shield any app, no code change)
 
 ```bash
 # Tier 1 — rules only, fully local, zero deps (DEFAULT)
-npx redactkit serve --port 8787 --upstream https://api.openai.com
+npx @pras-ops/redactkit serve --port 8787 --upstream https://api.openai.com
 export OPENAI_BASE_URL=http://localhost:8787/v1   # point your client here
 ```
 
 Add capabilities as needed:
 
 ```bash
-npx redactkit serve --tier ner --compress        # local NER + token compression
-npx redactkit serve --blur-images --faces        # sanitize images in vision requests
+npx @pras-ops/redactkit serve --tier ner --compress        # local NER + token compression
+npx @pras-ops/redactkit serve --blur-images --faces        # sanitize images in vision requests
 ```
 
 ### CLI (one-shot files)
 
 ```bash
-redactkit redact notes.txt --out safe.txt --map map.json   # + --tier ner
-redactkit restore reply.txt --map map.json
-redactkit compress payload.json --type json --drop-empty
-redactkit blur id-card.png --text-pii --faces --out safe.png
+npx @pras-ops/redactkit redact notes.txt --out safe.txt --map map.json   # + --tier ner
+npx @pras-ops/redactkit restore reply.txt --map map.json
+npx @pras-ops/redactkit compress payload.json --type json --drop-empty
+npx @pras-ops/redactkit blur id-card.png --text-pii --faces --out safe.png
 ```
 
 ---
@@ -193,7 +235,7 @@ Most coding tools let you point at a custom endpoint, so the proxy can shield th
 
 ```bash
 # Claude Code — redacts everything it sends to Anthropic, locally
-redactkit serve --upstream https://api.anthropic.com --tier ner --compress --format anthropic
+npx @pras-ops/redactkit serve --upstream https://api.anthropic.com --tier ner --compress --format anthropic
 export ANTHROPIC_BASE_URL=http://localhost:8787 && claude
 ```
 
@@ -222,13 +264,7 @@ flowchart TD
 | `rules` *(default)* | regex + Luhn | **none** | emails, phones, SSNs, cards, IPs, API keys |
 | `ner` | local NER ([transformers.js](https://huggingface.co/docs/transformers.js); `Xenova/bert-base-NER` default) | `@huggingface/transformers` *(optional, cached then offline)* | names, locations, organizations |
 | `auto` | regex + NER if available | optional | best available, **degrades gracefully** |
-| `llm` | local LLM ([Ollama](https://ollama.com) / WebLLM) | Ollama / WebGPU | hardest semantic cases |
-
----
-
-## Compression
-
-Rule-based and **safe** — reduces tokens without changing meaning, content-type aware: **JSON** minify (`--drop-empty` prunes empties), **HTML** strip + entity decode, **text** whitespace collapse + adjacent-line dedupe. Use it standalone (`redactkit compress`), in the proxy (`--compress`, applied **after** redaction), or as a `compress` step in `pipeline()`.
+Rule-based and **safe** — reduces tokens without changing meaning, content-type aware: **JSON** minify (`--drop-empty` prunes empties), **HTML** strip + entity decode, **text** whitespace collapse + adjacent-line dedupe. Use it standalone (`npx @pras-ops/redactkit compress`), in the proxy (`--compress`, applied **after** redaction), or as a `compress` step in `pipeline()`.
 
 ---
 
@@ -263,9 +299,9 @@ Full reference in [docs/API.md](docs/API.md). Summary:
 
 **Browser SDK — `new Preprocessor(options)`:** `redact`, `restore`, `clean`, `extract`, `chunk`, `prompt`, `pipeline`, `process`, `loadModel`, `checkWebGPU`. `redact` options: `tier`, `rules`, `llm`, `customPatterns`, `allowList`, `denyList`, `formatPreserving`, `state`.
 
-**Node — `redactkit/node`:** `redact`, `restore`, `compress`, `clean`, `chunk`, `extract`, `createProxyServer`, `startProxy`, `ALL_FORMATS`, `MapStore`, `OllamaEngine`, `RegexDetector`, `NERDetector`, `LLMDetector`, `DetectorRouter`, `buildRouter`, `mergeSpans`, `ImageSanitizer`, `OcrPiiRegionDetector`, `FaceRegionDetector`, `blurRegions`, `recompress`.
+**Node — `@pras-ops/redactkit/node`:** `redact`, `restore`, `compress`, `clean`, `chunk`, `extract`, `createProxyServer`, `startProxy`, `ALL_FORMATS`, `MapStore`, `OllamaEngine`, `RegexDetector`, `NERDetector`, `LLMDetector`, `DetectorRouter`, `buildRouter`, `mergeSpans`, `ImageSanitizer`, `OcrPiiRegionDetector`, `FaceRegionDetector`, `blurRegions`, `recompress`.
 
-**CLI — `redactkit <command>`:**
+**CLI — `npx @pras-ops/redactkit <command>`:**
 
 | Command | Purpose | Key flags |
 |---------|---------|-----------|
@@ -276,7 +312,7 @@ Full reference in [docs/API.md](docs/API.md). Summary:
 | `compress` | Token compression | `--type json\|html\|text` `--drop-empty` |
 | `blur` | Sanitize an image | `--text-pii` `--faces` `--pixelate` `--ocr-lang` `--tier` |
 
-Run `redactkit help` for the full flag list.
+Run `npx @pras-ops/redactkit help` for the full flag list.
 
 ---
 
@@ -285,7 +321,7 @@ Run `redactkit help` for the full flag list.
 ```
 src/
   index.js              # browser SDK entry (Preprocessor, createShieldedFetch)
-  node.js               # Node entry: redactkit/node
+  node.js               # Node entry: @pras-ops/redactkit/node
   engine.js             # WebLLM engine (browser, lazy)        engines/ollama.js (Node LLM tier)
   detect/               # tiered detection: regex · ner · llm · router
   preprocess/           # redact/restore, clean, clean-rules, chunk, extract

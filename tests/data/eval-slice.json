@@ -1,0 +1,70 @@
+[
+  {
+    "text": "Send questions to support@example.com and contact admin@domain.org.",
+    "entities": [
+      { "value": "support@example.com", "type": "EMAIL" },
+      { "value": "admin@domain.org", "type": "EMAIL" }
+    ]
+  },
+  {
+    "text": "Call us at 123-456-7890 or +1 (555) 019-9999.",
+    "entities": [
+      { "value": "123-456-7890", "type": "PHONE" },
+      { "value": "+1 (555) 019-9999", "type": "PHONE" }
+    ]
+  },
+  {
+    "text": "My SSN is 999-12-3456 and my colleague's is 000-45-6789.",
+    "entities": [
+      { "value": "999-12-3456", "type": "SSN" },
+      { "value": "000-45-6789", "type": "SSN" }
+    ]
+  },
+  {
+    "text": "Use CC 4111-1111-1111-1111 for payments, do not use 4111-1111-1111-1112.",
+    "entities": [
+      { "value": "4111-1111-1111-1111", "type": "CREDIT_CARD" }
+    ]
+  },
+  {
+    "text": "Server IP is 192.168.1.1 and IPv6 is 2001:db8:3333:4444:5555:6666:7777:8888.",
+    "entities": [
+      { "value": "192.168.1.1", "type": "IP_ADDRESS" },
+      { "value": "2001:db8:3333:4444:5555:6666:7777:8888", "type": "IP_ADDRESS" }
+    ]
+  },
+  {
+    "text": "My API key is x01-abcefg1234567890xyz and GitHub key is ghpat_abcdef1234567890123456.",
+    "entities": [
+      { "value": "x01-abcefg1234567890xyz", "type": "API_KEY" },
+      { "value": "ghpat_abcdef1234567890123456", "type": "API_KEY" }
+    ]
+  },
+  {
+    "text": "Alice and Bob visited the Microsoft office in Seattle.",
+    "entities": [
+      { "value": "Alice", "type": "PERSON" },
+      { "value": "Bob", "type": "PERSON" },
+      { "value": "Microsoft", "type": "ORGANIZATION" },
+      { "value": "Seattle", "type": "LOCATION" }
+    ]
+  },
+  {
+    "text": "Contact John Doe at john.doe@acme.org or call 555-0100. He is in New York.",
+    "entities": [
+      { "value": "John Doe", "type": "PERSON" },
+      { "value": "john.doe@acme.org", "type": "EMAIL" },
+      { "value": "555-0100", "type": "PHONE" },
+      { "value": "New York", "type": "LOCATION" }
+    ]
+  },
+  {
+    "text": "Google was founded by Larry Page and Sergey Brin in California.",
+    "entities": [
+      { "value": "Google", "type": "ORGANIZATION" },
+      { "value": "Larry Page", "type": "PERSON" },
+      { "value": "Sergey Brin", "type": "PERSON" },
+      { "value": "California", "type": "LOCATION" }
+    ]
+  }
+]

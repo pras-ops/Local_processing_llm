@@ -20,6 +20,8 @@ export class Preprocessor {
     this.engine = options.engine || new LLMEngine(options);
     this.isModelLoaded = typeof this.engine.isLoaded === "function" ? this.engine.isLoaded() : false;
     this.logger = this.engine.getLogger();
+    this.offload = options.offload ?? false;
+    this.workerPool = null;
   }
 
   /**
@@ -147,7 +149,19 @@ export class Preprocessor {
     if (options?.llm?.enabled === true) {
       this._ensureLoaded();
     }
-    return await redact(this.engine, text, options);
+
+    const shouldOffload = options.offload !== undefined ? options.offload : this.offload;
+    let redactOptions = { ...options };
+
+    if (shouldOffload) {
+      if (!this.workerPool) {
+        const { WorkerPool } = await import("./workers/worker-pool.js");
+        this.workerPool = new WorkerPool(options);
+      }
+      redactOptions.nerDetector = this.workerPool;
+    }
+
+    return await redact(this.engine, text, redactOptions);
   }
 
   /**
